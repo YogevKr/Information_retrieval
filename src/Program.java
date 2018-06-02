@@ -18,7 +18,8 @@ public class Program {
     private static String m_WorkingDir;
     private static String m_RetrievalAlgorithm = "";
     private static SearchEngine m_SearchEngine;
-    private static  Map<Integer, Map> m_QueriesResults;
+    private static Map<Integer, Map> m_QueriesResults;
+    private static Map<Integer, String[]> m_Truth;
 
 
     public static void main(String[] args) throws IOException, ParseException {
@@ -40,6 +41,7 @@ public class Program {
 
         executeAllQueries();
         writeQueriesResultsToFile();
+        parseTheTruth("truth.txt");
 
 //        Fields fields = MultiFields.getFields(reader);
 //        if (fields != null) {
@@ -56,6 +58,19 @@ public class Program {
 //            }
 //        }
 
+    }
+
+    private static void parseTheTruth(String i_PathToTheTruth){
+        ArrayList<String> lines = Utils.fileToLineList(i_PathToTheTruth);
+        Map<Integer, String[]> truth = new HashMap<>();
+
+        for (String line : lines){
+            if (!line.equals("")) {
+                String[] sp = line.split(" +",2);
+                truth.put(Integer.parseInt(sp[0]), sp[1].split(" +"));
+            }
+        }
+        m_Truth = truth;
     }
 
     private static void executeAllQueries() throws IOException, ParseException {
