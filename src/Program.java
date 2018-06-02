@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
@@ -15,10 +16,11 @@ public class Program {
 
     private static File m_DocsFile;
     private static File m_QueryFile;
-    private static File m_OutputFile;
+    private static FileWriter m_OutputFile;
 
     private static String m_WorkingDir;
     private static String m_RetrievalAlgorithm = "";
+    private static SearchEngine m_SearchEngine;
 
 
     public static void main(String[] args) throws IOException, ParseException {
@@ -30,15 +32,14 @@ public class Program {
 
         initFromParameterFile(args[0]);
 
-        SearchEngine searchEngine = new SearchEngine();
-        searchEngine.SetRetrievalAlgorithm(m_RetrievalAlgorithm);
-        searchEngine.SetStopWords();
-        searchEngine.SetAnalyzer();
-        searchEngine.SetIndex();
-        searchEngine.AddDocsFile(m_DocsFile);
-        searchEngine.GetScoreDocsForQuery("KENNEDY");
+        m_SearchEngine = new SearchEngine();
+        m_SearchEngine.SetRetrievalAlgorithm(m_RetrievalAlgorithm);
+        m_SearchEngine.SetStopWords();
+        m_SearchEngine.SetAnalyzer();
+        m_SearchEngine.SetIndex();
+        m_SearchEngine.AddDocsFile(m_DocsFile);
 
-
+        executeAllQueries();
 
 //        Fields fields = MultiFields.getFields(reader);
 //        if (fields != null) {
@@ -55,38 +56,27 @@ public class Program {
 //            }
 //        }
 
-
-        // 2. query
-        String querystr = "KENNEDY";
-
-        // the "title" arg specifies the default field to use
-        // when no field is explicitly specified in the query.
-
-        Query q = new QueryParser("docContent", searchEngine.m_Analyzer).parse(querystr);
-
-        // 3. search
-        int hitsPerPage = 10;
-        IndexReader reader = DirectoryReader.open(searchEngine.m_Index);
-        IndexSearcher searcher = new IndexSearcher(reader);
-        TopDocs docs = searcher.search(q, hitsPerPage);
-        ScoreDoc[] hits = docs.scoreDocs;
-
-        // 4. display results
-        System.out.println("Found " + hits.length + " hits.");
-        for(int i=0;i<hits.length;++i) {
-            int docId = hits[i].doc;
-            Document d = searcher.doc(docId);
-            System.out.println((i + 1) + ". " + d.get("docContent") + "\t" + d.get("docID"));
-        }
-
-        // reader can only be closed when there
-        // is no need to access the documents any more.
-        reader.close();
     }
 
+    private static void executeAllQueries() throws IOException, ParseException {
+        ArrayList<String> queries = m_SearchEngine.GetQueriesFromFile(m_QueryFile);
 
-    private static void initFromParameterFile(String parameterFilePath) {
-        ArrayList<String> lines = Utils.fileToLineList(parameterFilePath);
+        for (int i = 0; i < queries.size(); i++){
+            ScoreDoc[] scoreDocs = m_SearchEngine.GetScoreDocsForQuery(queries.get(i));
+            StringBuilder docsId = new StringBuilder();
+
+            for (ScoreDoc doc: scoreDocs) {
+                docsId.append(doc.doc + " ");
+            }
+
+            m_OutputFile.write((i + 1) + " " + docsId.toString() + "\n");
+        }
+
+        m_OutputFile.close();
+    }
+
+    private static void initFromParameterFile(String i_parameterFilePath) {
+        ArrayList<String> lines = Utils.fileToLineList(i_parameterFilePath);
 
         for (String line: lines) {
 
@@ -97,7 +87,12 @@ public class Program {
                 m_DocsFile = new File(line.substring(line.indexOf('=') + 1));
             }
             else if ((line.startsWith("outputFile="))){
-                m_OutputFile = new File(line.substring(line.indexOf('=') + 1));
+                try {
+                    m_OutputFile = new FileWriter(line.substring(line.indexOf('=') + 1));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    System.exit(1);
+                }
             }
             else if ((line.startsWith("retrievalAlgorithm="))){
                 m_RetrievalAlgorithm = line.substring(line.indexOf('=') + 1);

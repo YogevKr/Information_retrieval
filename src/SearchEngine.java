@@ -75,7 +75,7 @@ public class SearchEngine {
 
     public ScoreDoc[] GetScoreDocsForQuery(String i_QueryStr) throws IOException, ParseException {
 
-        int hitsPerPage = 10;
+        int hitsPerPage = 20;
 
         IndexReader reader = DirectoryReader.open(m_Index);
         IndexSearcher searcher = new IndexSearcher(reader);
@@ -84,12 +84,37 @@ public class SearchEngine {
         Query query = new QueryParser("docContent", m_Analyzer).parse(i_QueryStr);
 
         TopDocs docs = searcher.search(query, hitsPerPage);
-        ScoreDoc[] hits = docs.scoreDocs;
 
-        return hits;
+        reader.close();
+
+        return docs.scoreDocs;
     }
 
+    public ArrayList<String> GetQueriesFromFile(File i_QueryFile){
+        ArrayList<String> queryFileLinesRaw = Utils.fileToLineList(i_QueryFile);
+        ArrayList<String> queries = new ArrayList<String>();
+        StringBuilder query = null;
 
+        for (String line: queryFileLinesRaw) {
+            if (line.startsWith("*FIND ")){
+
+                if (query != null){
+                    queries.add(query.toString());
+                }
+
+                query = new StringBuilder();
+            }
+            else{
+
+                if (query != null) {
+                    query.append(" ");
+                    query.append(line);
+                }
+            }
+        }
+
+        return queries;
+    }
 
     public void SetAnalyzer(){
         // 0. Specify the analyzer for tokenizing text.
