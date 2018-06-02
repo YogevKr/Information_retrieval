@@ -3,17 +3,13 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
-import org.apache.lucene.document.Document;
-import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.ParseException;
-import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
+
 
 public class Program {
 
+    private static final int THRESHOLD = 12;
     private static File m_DocsFile;
     private static File m_QueryFile;
     private static FileWriter m_OutputFile;
@@ -34,6 +30,7 @@ public class Program {
 
         m_SearchEngine = new SearchEngine();
         m_SearchEngine.SetRetrievalAlgorithm(m_RetrievalAlgorithm);
+        m_SearchEngine.SetThreshold(THRESHOLD);
         m_SearchEngine.SetStopWords();
         m_SearchEngine.SetAnalyzer();
         m_SearchEngine.SetIndex();
@@ -63,10 +60,14 @@ public class Program {
 
         for (int i = 0; i < queries.size(); i++){
             ScoreDoc[] scoreDocs = m_SearchEngine.GetScoreDocsForQuery(queries.get(i));
+            ArrayList<Integer> docsList = m_SearchEngine.
+                    GetDocsIdListFromScoreDocsWithThreshold(scoreDocs);
+            Collections.sort(docsList);
+
             StringBuilder docsId = new StringBuilder();
 
-            for (ScoreDoc doc: scoreDocs) {
-                docsId.append(doc.doc + " ");
+            for (int docId: docsList){
+                docsId.append(docId + " ");
             }
 
             m_OutputFile.write((i + 1) + " " + docsId.toString() + "\n");

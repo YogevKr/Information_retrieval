@@ -27,12 +27,31 @@ import java.util.regex.Pattern;
 
 public class SearchEngine {
 
+    private int m_Threshold;
     private String m_RetrievalAlgorithm = "";
     private ArrayList<String> m_StopWordList;
     public StandardAnalyzer m_Analyzer; // TODO change to private
     public Directory m_Index; // TODO change to private
     private IndexWriterConfig m_IndexWriterConfig;
     private Similarity m_SimilarityMethod;
+
+    public ArrayList<Integer> GetDocsIdListFromScoreDocsWithThreshold(ScoreDoc[] scoreDocs){
+        ArrayList<Integer> docsList = new ArrayList<Integer>();
+
+        for (ScoreDoc doc: scoreDocs) {
+
+            docsList.add(doc.doc);
+
+            if (doc.score < m_Threshold)
+                break;
+        }
+
+        return docsList;
+    }
+
+    public void SetThreshold(int i_t){
+        m_Threshold = i_t;
+    }
 
     public void AddDocsFile(File i_DocsFile) throws IOException {
 
@@ -54,6 +73,10 @@ public class SearchEngine {
                 doc.append(" ");
                 doc.append(line);
             }
+        }
+
+        if (!key.equals("")){
+            docs.put(key, doc.toString());
         }
 
         IndexWriter w = new IndexWriter(m_Index, m_IndexWriterConfig);
@@ -111,6 +134,10 @@ public class SearchEngine {
                     query.append(line);
                 }
             }
+        }
+
+        if (query != null && !query.toString().equals("")){
+            queries.add(query.toString());
         }
 
         return queries;
