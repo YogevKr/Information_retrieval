@@ -1,14 +1,22 @@
+import java.io.File;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
+import org.apache.lucene.analysis.StopFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.*;
+import org.apache.lucene.misc.TermStats;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
@@ -17,24 +25,62 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
+import org.apache.lucene.misc.HighFreqTerms;
+import org.apache.lucene.misc.HighFreqTerms.TotalTermFreqComparator;
+import org.apache.lucene.util.BytesRef;
+
 
 public class Program {
+
+    private static File m_DocsFile;
+    private static File m_QueryFile;
+    private static File m_OutputFile;
+
+    private static String m_WorkingDir;
+    private static String m_RetrievalAlgorithm = "";
+
+
     public static void main(String[] args) throws IOException, ParseException {
+
+        if (args.length != 1){
+            System.out.println("Software except exactly one parameter");
+            System.exit(1);
+        }
+
+        initFromParameterFile(args[0]);
+
+
         // 0. Specify the analyzer for tokenizing text.
         //    The same analyzer should be used for indexing and searching
-        StandardAnalyzer analyzer = new StandardAnalyzer();
+
+        ArrayList<String> stopWordList = new ArrayList<String>();
+
+        StandardAnalyzer analyzer = new StandardAnalyzer(StopFilter.makeStopSet(stopWordList));
 
         // 1. create the index
         Directory index = new RAMDirectory();
-
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
 
-        IndexWriter w = new IndexWriter(index, config);
-        addDoc(w, "Lucene in Action", "193398817");
-        addDoc(w, "Lucene for Dummies", "55320055Z");
-        addDoc(w, "Managing Gigabytes", "55063554A");
-        addDoc(w, "The Art of Computer Science", "9900333X");
-        w.close();
+        addAllDocsFromFile(index, config);
+
+        IndexReader reader = DirectoryReader.open(index);
+
+
+//        Fields fields = MultiFields.getFields(reader);
+//        if (fields != null) {
+//            Terms terms = fields.terms("docContent");
+//            if (terms != null) {
+//                TermsEnum termsEnum = terms.iterator();
+//                BytesRef t = termsEnum.next();
+//
+//                while (t != null){
+//                    System.out.println(termsEnum.term().toString());
+//
+//                    t = termsEnum.next();
+//                }
+//            }
+//        }
+
 
         // 2. query
         String querystr = args.length > 0 ? args[0] : "lucene";
@@ -45,7 +91,7 @@ public class Program {
 
         // 3. search
         int hitsPerPage = 10;
-        IndexReader reader = DirectoryReader.open(index);
+//        IndexReader reader = DirectoryReader.open(index);
         IndexSearcher searcher = new IndexSearcher(reader);
         TopDocs docs = searcher.search(q, hitsPerPage);
         ScoreDoc[] hits = docs.scoreDocs;
@@ -63,12 +109,92 @@ public class Program {
         reader.close();
     }
 
-    private static void addDoc(IndexWriter w, String title, String isbn) throws IOException {
-        Document doc = new Document();
-        doc.add(new TextField("title", title, Field.Store.YES));
+    private static void addAllDocsFromFile(Directory index, IndexWriterConfig config) throws IOException {
 
-        // use a string field for isbn because we don't want it tokenized
-        doc.add(new StringField("isbn", isbn, Field.Store.YES));
+        ArrayList<String> docsFileLinesRaw = fileToLineList(m_DocsFile);
+        Map<String, String> docs = new HashMap<String, String>();
+        StringBuilder doc = new StringBuilder();
+        String key = "";
+
+        for (String line: docsFileLinesRaw) {
+            if (line.startsWith("*TEXT ")){
+                if (!key.equals("")){
+                    docs.put(key, doc.toString());
+                }
+
+                doc = new StringBuilder();
+                key = line;
+            }
+            else{
+                doc.append(" ");
+                doc.append(line);
+            }
+        }
+
+        IndexWriter w = new IndexWriter(index, config);
+        Pattern pattern = Pattern.compile("\\*TEXT (\\d?)");
+
+        for (Map.Entry<String, String> entry : docs.entrySet()) {
+            Matcher matcher = pattern.matcher(entry.getKey());
+            matcher.find();
+            addDoc(w, matcher.group(1), entry.getValue());
+        }
+
+        w.close();
+    }
+
+    private static ArrayList<String> fileToLineList(File file){
+
+        ArrayList<String> list = new ArrayList<String>();
+        try {
+            Scanner input = new Scanner(file);
+
+            while (input.hasNextLine()) {
+                list.add(input.nextLine());
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    private static ArrayList<String> fileToLineList(String filePath){
+        return fileToLineList(new File(filePath));
+    }
+
+    private static void initFromParameterFile(String parameterFilePath) {
+        ArrayList<String> lines = fileToLineList(parameterFilePath);
+
+        for (String line: lines) {
+
+            if (line.startsWith("queryFile=")){
+                m_QueryFile = new File(line.substring(line.indexOf('=') + 1));
+            }
+            else if ((line.startsWith("docsFile="))){
+                m_DocsFile = new File(line.substring(line.indexOf('=') + 1));
+            }
+            else if ((line.startsWith("outputFile="))){
+                m_OutputFile = new File(line.substring(line.indexOf('=') + 1));
+            }
+            else if ((line.startsWith("retrievalAlgorithm="))){
+                m_RetrievalAlgorithm = line.substring(line.indexOf('=') + 1);
+            }
+        }
+
+        if (!(m_RetrievalAlgorithm.equals("basic") || m_RetrievalAlgorithm.equals("improved"))){
+            System.out.println("Invalid Retrieval Algorithm!");
+            System.exit(1);
+        }
+    }
+
+    private static void addDoc(IndexWriter w, String id, String docContent) throws IOException {
+        Document doc = new Document();
+
+        doc.add(new TextField("docContent", docContent, Field.Store.YES));
+        doc.add(new StringField("docID", id, Field.Store.YES));
+
         w.addDocument(doc);
     }
 }

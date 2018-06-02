@@ -1,0 +1,14 @@
+Find 20 stop words
+Handle hyphenated
+
+Comparator<TermStats> comparator = new HighFreqTerms.DocFreqComparator();
+        try {
+            TermStats[] commonTerms = HighFreqTerms.getHighFreqTerms(reader, 1, "isbn", comparator);
+            for (TermStats commonTerm : commonTerms) {
+                System.out.println(commonTerm.termtext.utf8ToString());
+                System.out.println(commonTerm.docFreq());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
