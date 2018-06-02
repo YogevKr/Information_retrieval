@@ -1,34 +1,15 @@
 import java.io.File;
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
-
-import org.apache.lucene.analysis.StopFilter;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.*;
-import org.apache.lucene.misc.TermStats;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.RAMDirectory;
-import org.apache.lucene.misc.HighFreqTerms;
-import org.apache.lucene.misc.HighFreqTerms.TotalTermFreqComparator;
-import org.apache.lucene.util.BytesRef;
-
 
 public class Program {
 
@@ -50,9 +31,12 @@ public class Program {
         initFromParameterFile(args[0]);
 
         SearchEngine searchEngine = new SearchEngine();
+        searchEngine.SetRetrievalAlgorithm(m_RetrievalAlgorithm);
         searchEngine.SetStopWords();
-        searchEngine.SetAnalayzer();
+        searchEngine.SetAnalyzer();
         searchEngine.SetIndex();
+        searchEngine.AddDocsFile(m_DocsFile);
+        searchEngine.GetScoreDocsForQuery("KENNEDY");
 
 
 
@@ -73,12 +57,12 @@ public class Program {
 
 
         // 2. query
-        String querystr = args.length > 0 ? args[0] : "lucene";
+        String querystr = "KENNEDY";
 
         // the "title" arg specifies the default field to use
         // when no field is explicitly specified in the query.
 
-        Query q = new QueryParser("title", searchEngine.m_Analyzer).parse(querystr);
+        Query q = new QueryParser("docContent", searchEngine.m_Analyzer).parse(querystr);
 
         // 3. search
         int hitsPerPage = 10;
@@ -92,7 +76,7 @@ public class Program {
         for(int i=0;i<hits.length;++i) {
             int docId = hits[i].doc;
             Document d = searcher.doc(docId);
-            System.out.println((i + 1) + ". " + d.get("isbn") + "\t" + d.get("title"));
+            System.out.println((i + 1) + ". " + d.get("docContent") + "\t" + d.get("docID"));
         }
 
         // reader can only be closed when there
