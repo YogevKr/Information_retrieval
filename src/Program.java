@@ -49,21 +49,11 @@ public class Program {
 
         initFromParameterFile(args[0]);
 
+        SearchEngine searchEngine = new SearchEngine();
+        searchEngine.SetStopWords();
+        searchEngine.SetAnalayzer();
+        searchEngine.SetIndex();
 
-        // 0. Specify the analyzer for tokenizing text.
-        //    The same analyzer should be used for indexing and searching
-
-        ArrayList<String> stopWordList = new ArrayList<String>();
-
-        StandardAnalyzer analyzer = new StandardAnalyzer(StopFilter.makeStopSet(stopWordList));
-
-        // 1. create the index
-        Directory index = new RAMDirectory();
-        IndexWriterConfig config = new IndexWriterConfig(analyzer);
-
-        addAllDocsFromFile(index, config);
-
-        IndexReader reader = DirectoryReader.open(index);
 
 
 //        Fields fields = MultiFields.getFields(reader);
@@ -87,11 +77,12 @@ public class Program {
 
         // the "title" arg specifies the default field to use
         // when no field is explicitly specified in the query.
-        Query q = new QueryParser("title", analyzer).parse(querystr);
+
+        Query q = new QueryParser("title", searchEngine.m_Analyzer).parse(querystr);
 
         // 3. search
         int hitsPerPage = 10;
-//        IndexReader reader = DirectoryReader.open(index);
+        IndexReader reader = DirectoryReader.open(searchEngine.m_Index);
         IndexSearcher searcher = new IndexSearcher(reader);
         TopDocs docs = searcher.search(q, hitsPerPage);
         ScoreDoc[] hits = docs.scoreDocs;
@@ -109,63 +100,9 @@ public class Program {
         reader.close();
     }
 
-    private static void addAllDocsFromFile(Directory index, IndexWriterConfig config) throws IOException {
-
-        ArrayList<String> docsFileLinesRaw = fileToLineList(m_DocsFile);
-        Map<String, String> docs = new HashMap<String, String>();
-        StringBuilder doc = new StringBuilder();
-        String key = "";
-
-        for (String line: docsFileLinesRaw) {
-            if (line.startsWith("*TEXT ")){
-                if (!key.equals("")){
-                    docs.put(key, doc.toString());
-                }
-
-                doc = new StringBuilder();
-                key = line;
-            }
-            else{
-                doc.append(" ");
-                doc.append(line);
-            }
-        }
-
-        IndexWriter w = new IndexWriter(index, config);
-        Pattern pattern = Pattern.compile("\\*TEXT (\\d?)");
-
-        for (Map.Entry<String, String> entry : docs.entrySet()) {
-            Matcher matcher = pattern.matcher(entry.getKey());
-            matcher.find();
-            addDoc(w, matcher.group(1), entry.getValue());
-        }
-
-        w.close();
-    }
-
-    private static ArrayList<String> fileToLineList(File file){
-
-        ArrayList<String> list = new ArrayList<String>();
-        try {
-            Scanner input = new Scanner(file);
-
-            while (input.hasNextLine()) {
-                list.add(input.nextLine());
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return list;
-    }
-
-    private static ArrayList<String> fileToLineList(String filePath){
-        return fileToLineList(new File(filePath));
-    }
 
     private static void initFromParameterFile(String parameterFilePath) {
-        ArrayList<String> lines = fileToLineList(parameterFilePath);
+        ArrayList<String> lines = Utils.fileToLineList(parameterFilePath);
 
         for (String line: lines) {
 
@@ -189,12 +126,5 @@ public class Program {
         }
     }
 
-    private static void addDoc(IndexWriter w, String id, String docContent) throws IOException {
-        Document doc = new Document();
 
-        doc.add(new TextField("docContent", docContent, Field.Store.YES));
-        doc.add(new StringField("docID", id, Field.Store.YES));
-
-        w.addDocument(doc);
-    }
 }
