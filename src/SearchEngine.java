@@ -35,19 +35,6 @@ public class SearchEngine {
     private IndexWriterConfig m_IndexWriterConfig;
     private Similarity m_SimilarityMethod;
 
-    public ArrayList<Integer> GetDocsIdListFromScoreDocsWithThreshold(ScoreDoc[] scoreDocs){
-        ArrayList<Integer> docsList = new ArrayList<Integer>();
-
-        for (ScoreDoc doc: scoreDocs) {
-
-            docsList.add(doc.doc);
-
-            if (doc.score < m_Threshold)
-                break;
-        }
-
-        return docsList;
-    }
 
     public void SetThreshold(int i_t){
         m_Threshold = i_t;
@@ -96,7 +83,7 @@ public class SearchEngine {
         m_StopWordList = new ArrayList<String>();
     }
 
-    public ScoreDoc[] GetScoreDocsForQuery(String i_QueryStr) throws IOException, ParseException {
+    public Map<String, Float> GetScoreDocsForQuery(String i_QueryStr) throws IOException, ParseException {
 
         int hitsPerPage = 20;
 
@@ -108,9 +95,21 @@ public class SearchEngine {
 
         TopDocs docs = searcher.search(query, hitsPerPage);
 
+        Map<String, Float> docsMap = new HashMap<>();
+
+        for (ScoreDoc doc: docs.scoreDocs) {
+            Document d = searcher.doc(doc.doc);
+            String id = d.get("docID");
+            docsMap.put(id, doc.score);
+
+
+            if (doc.score < m_Threshold)
+                break;
+        }
+
         reader.close();
 
-        return docs.scoreDocs;
+        return docsMap;
     }
 
     public ArrayList<String> GetQueriesFromFile(File i_QueryFile){

@@ -5,6 +5,7 @@ import java.util.*;
 
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.ScoreDoc;
+import sun.awt.SunHints;
 
 
 public class Program {
@@ -17,6 +18,7 @@ public class Program {
     private static String m_WorkingDir;
     private static String m_RetrievalAlgorithm = "";
     private static SearchEngine m_SearchEngine;
+    private static  Map<Integer, Map> m_QueriesResults;
 
 
     public static void main(String[] args) throws IOException, ParseException {
@@ -37,6 +39,7 @@ public class Program {
         m_SearchEngine.AddDocsFile(m_DocsFile);
 
         executeAllQueries();
+        writeQueriesResultsToFile();
 
 //        Fields fields = MultiFields.getFields(reader);
 //        if (fields != null) {
@@ -57,20 +60,32 @@ public class Program {
 
     private static void executeAllQueries() throws IOException, ParseException {
         ArrayList<String> queries = m_SearchEngine.GetQueriesFromFile(m_QueryFile);
+        Map<Integer, Map> queriesResults = new HashMap<>();
 
-        for (int i = 0; i < queries.size(); i++){
-            ScoreDoc[] scoreDocs = m_SearchEngine.GetScoreDocsForQuery(queries.get(i));
-            ArrayList<Integer> docsList = m_SearchEngine.
-                    GetDocsIdListFromScoreDocsWithThreshold(scoreDocs);
+        for (int i = 0; i < queries.size(); i++) {
+            Map<String, Float> scoreDocs = m_SearchEngine.GetScoreDocsForQuery(queries.get(i));
+            queriesResults.put((i + 1), scoreDocs);
+
+            m_QueriesResults = queriesResults;
+        }
+    }
+
+    private static void writeQueriesResultsToFile() throws IOException {
+
+        ArrayList<Integer> queriesIds = new ArrayList<>(m_QueriesResults.keySet());
+        Collections.sort(queriesIds);
+
+        for (int id: queriesIds) {
+            ArrayList<String> docsList = new ArrayList<String>(m_QueriesResults.get(id).keySet());
             Collections.sort(docsList);
 
             StringBuilder docsId = new StringBuilder();
 
-            for (int docId: docsList){
+            for (String docId: docsList){
                 docsId.append(docId + " ");
             }
 
-            m_OutputFile.write((i + 1) + " " + docsId.toString() + "\n");
+            m_OutputFile.write(id + " " + docsId.toString() + "\n");
         }
 
         m_OutputFile.close();
