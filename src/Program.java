@@ -3,6 +3,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
+import com.sun.corba.se.impl.oa.toa.TOA;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.ScoreDoc;
 import sun.awt.SunHints;
@@ -11,6 +12,9 @@ import sun.awt.SunHints;
 public class Program {
 
     private static final int THRESHOLD = 12;
+    private static final double ALPHA = 0.5;
+    private static final double BETA = 1;
+
     private static File m_DocsFile;
     private static File m_QueryFile;
     private static FileWriter m_OutputFile;
@@ -42,6 +46,7 @@ public class Program {
         executeAllQueries();
         writeQueriesResultsToFile();
         parseTheTruth("truth.txt");
+        runExperiment();
 
 //        Fields fields = MultiFields.getFields(reader);
 //        if (fields != null) {
@@ -57,6 +62,37 @@ public class Program {
 //                }
 //            }
 //        }
+
+    }
+
+    private static void runExperiment() {
+
+        for (int i = 1; i <= m_Truth.size(); i++){
+
+            //TP
+            ArrayList<String> predictionDocs = new ArrayList<>(m_QueriesResults.get(i).keySet());
+            predictionDocs.retainAll(new ArrayList<String>(Arrays.asList(m_Truth.get(i))));
+            int TP = predictionDocs.size();
+
+            //FP
+            predictionDocs = new ArrayList<>(m_QueriesResults.get(i).keySet());
+            predictionDocs.removeAll(Arrays.asList(m_Truth.get(i)));
+            int FP = predictionDocs.size();
+
+            //FN
+            predictionDocs = new ArrayList<>(m_QueriesResults.get(i).keySet());
+            ArrayList<String> truth = new ArrayList<>(Arrays.asList(m_Truth.get(i)));
+            truth.removeAll(predictionDocs);
+            int FN = truth.size();
+
+            double precision = (TP == 0) ? FP/(TP + 1.0) : FP/(TP + 0.0);
+            double recall = (TP == 0) ? FN/(TP + 1.0) : FN/(TP + 0.0);
+
+            // TODO: Check this formula
+            double F = 1 / ((ALPHA / precision) + ((1 - ALPHA) / recall));
+
+            System.out.println(String.format("%d Precision = %.2f Recall = %.2f F = %.2f", i, precision, recall, F));
+        }
 
     }
 
