@@ -8,6 +8,8 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.misc.HighFreqTerms;
+import org.apache.lucene.misc.TermStats;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
@@ -79,8 +81,28 @@ public class SearchEngine {
     }
 
     //TODO
-    public void SetStopWords(){
+
+    public void InitStopWords() {
         m_StopWordList = new ArrayList<String>();
+    }
+
+    public void SetStopWords(ArrayList<String> i_termList) {
+        m_StopWordList = i_termList;
+    }
+
+    public ArrayList<String> GetMostCommonTerms(int i_n) throws Exception {
+        ArrayList<String> termList = new ArrayList<String>();
+        IndexReader reader = DirectoryReader.open(m_Index);
+        TermStats[] terms = HighFreqTerms.getHighFreqTerms(reader, i_n,
+                "docContent", new HighFreqTerms.DocFreqComparator());
+
+        for (TermStats term : terms){
+            m_StopWordList.add(term.termtext.utf8ToString());
+        }
+
+        reader.close();
+
+        return termList;
     }
 
     public Map<String, Float> GetScoreDocsForQuery(String i_QueryStr) throws IOException, ParseException {

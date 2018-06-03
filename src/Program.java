@@ -4,16 +4,21 @@ import java.io.IOException;
 import java.util.*;
 
 import com.sun.corba.se.impl.oa.toa.TOA;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.misc.HighFreqTerms;
+import org.apache.lucene.misc.TermStats;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.ScoreDoc;
-import sun.awt.SunHints;
 
 
 public class Program {
 
     private static final int THRESHOLD = 12;
+    private static final int NUM_OF_STOP_WORDS = 20;
     private static final double ALPHA = 0.5;
     private static final double BETA = 1;
+
 
     private static File m_DocsFile;
     private static File m_QueryFile;
@@ -35,10 +40,22 @@ public class Program {
 
         initFromParameterFile(args[0]);
 
+        SearchEngine tempEngine = new SearchEngine();
+        tempEngine.InitStopWords();
+        tempEngine.SetAnalyzer();
+        tempEngine.SetIndex();
+        tempEngine.AddDocsFile(m_DocsFile);
+
         m_SearchEngine = new SearchEngine();
         m_SearchEngine.SetRetrievalAlgorithm(m_RetrievalAlgorithm);
         m_SearchEngine.SetThreshold(THRESHOLD);
-        m_SearchEngine.SetStopWords();
+        m_SearchEngine.InitStopWords();
+        //TODO: Validate that the stopwords counts
+        try {
+            m_SearchEngine.SetStopWords(tempEngine.GetMostCommonTerms(NUM_OF_STOP_WORDS));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         m_SearchEngine.SetAnalyzer();
         m_SearchEngine.SetIndex();
         m_SearchEngine.AddDocsFile(m_DocsFile);
@@ -47,21 +64,6 @@ public class Program {
         writeQueriesResultsToFile();
         parseTheTruth("truth.txt");
         runExperiment();
-
-//        Fields fields = MultiFields.getFields(reader);
-//        if (fields != null) {
-//            Terms terms = fields.terms("docContent");
-//            if (terms != null) {
-//                TermsEnum termsEnum = terms.iterator();
-//                BytesRef t = termsEnum.next();
-//
-//                while (t != null){
-//                    System.out.println(termsEnum.term().toString());
-//
-//                    t = termsEnum.next();
-//                }
-//            }
-//        }
 
     }
 
