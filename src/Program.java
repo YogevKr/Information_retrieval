@@ -86,11 +86,12 @@ public class Program {
             truth.removeAll(predictionDocs);
             int FN = truth.size();
 
-            double precision = (TP == 0) ? FP/(TP + 1.0) : FP/(TP + 0.0);
-            double recall = (TP == 0) ? FN/(TP + 1.0) : FN/(TP + 0.0);
+            double precision = TP/(TP + FP + 0.0);
+            double recall = TP/(TP + FN + 0.0);
 
             // TODO: Check this formula
             double F = 1 / ((ALPHA / precision) + ((1 - ALPHA) / recall));
+            double F1 = ((BETA * BETA + 1) * precision * recall) / ((BETA * BETA * precision) + recall);
 
             System.out.println(String.format("%d Precision = %.2f Recall = %.2f F = %.2f", i, precision, recall, F));
         }
