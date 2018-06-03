@@ -1,3 +1,4 @@
+import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.StopFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -21,9 +22,7 @@ import org.apache.lucene.store.RAMDirectory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -97,7 +96,7 @@ public class SearchEngine {
                 "docContent", new HighFreqTerms.DocFreqComparator());
 
         for (TermStats term : terms){
-            m_StopWordList.add(term.termtext.utf8ToString());
+            termList.add(term.termtext.utf8ToString());
         }
 
         reader.close();

@@ -14,7 +14,7 @@ import org.apache.lucene.search.ScoreDoc;
 
 public class Program {
 
-    private static final int THRESHOLD = 12;
+    private static final int THRESHOLD = 9;
     private static final int NUM_OF_STOP_WORDS = 20;
     private static final double ALPHA = 0.5;
     private static final double BETA = 1;
@@ -50,7 +50,6 @@ public class Program {
         m_SearchEngine.SetRetrievalAlgorithm(m_RetrievalAlgorithm);
         m_SearchEngine.SetThreshold(THRESHOLD);
         m_SearchEngine.InitStopWords();
-        //TODO: Validate that the stopwords counts
         try {
             m_SearchEngine.SetStopWords(tempEngine.GetMostCommonTerms(NUM_OF_STOP_WORDS));
         } catch (Exception e) {
