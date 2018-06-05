@@ -14,7 +14,7 @@ import org.apache.lucene.search.ScoreDoc;
 
 public class Program {
 
-    private static final int THRESHOLD = 9;
+
     private static final int NUM_OF_STOP_WORDS = 20;
     private static final double ALPHA = 0.5;
     private static final double BETA = 1;
@@ -48,7 +48,6 @@ public class Program {
 
         m_SearchEngine = new SearchEngine();
         m_SearchEngine.SetRetrievalAlgorithm(m_RetrievalAlgorithm);
-        m_SearchEngine.SetThreshold(THRESHOLD);
         m_SearchEngine.InitStopWords();
         try {
             m_SearchEngine.SetStopWords(tempEngine.GetMostCommonTerms(NUM_OF_STOP_WORDS));
@@ -59,20 +58,51 @@ public class Program {
         m_SearchEngine.SetIndex();
         m_SearchEngine.AddDocsFile(m_DocsFile);
 
+        //// Find Best T
+
+//        findBestTForGivenTruth("truth.txt");
+
+
         executeAllQueries();
         writeQueriesResultsToFile();
+
+
         parseTheTruth("truth.txt");
         runExperiment();
 
     }
 
-    private static void runExperiment() {
+    private static void findBestTForGivenTruth(String i_TruthPath) throws IOException, ParseException {
+        parseTheTruth(i_TruthPath);
+
+        double T = 1, bestT = 0, F, bestF = 0;
+
+        while (T <= 1.4) {
+            m_SearchEngine.SetThreshold(T);
+            executeAllQueries();
+            F = runExperiment();
+
+            if (F > bestF){
+                bestF = F;
+                bestT = T;
+            }
+
+            T += 0.001;
+
+            System.out.println(String.format("T = %f, F = %f", T, F));
+        }
+
+        System.out.println(String.format("Best T = %f, Best F = %f", bestT, bestF));
+    }
+
+    private static double runExperiment() {
+        double sumOfF = 0, sumOfP = 0, sumOfR = 0;
 
         for (int i = 1; i <= m_Truth.size(); i++){
 
             //TP
             ArrayList<String> predictionDocs = new ArrayList<>(m_QueriesResults.get(i).keySet());
-            predictionDocs.retainAll(new ArrayList<String>(Arrays.asList(m_Truth.get(i))));
+            predictionDocs.retainAll(new ArrayList<>(Arrays.asList(m_Truth.get(i))));
             int TP = predictionDocs.size();
 
             //FP
@@ -86,16 +116,22 @@ public class Program {
             truth.removeAll(predictionDocs);
             int FN = truth.size();
 
-            double precision = TP/(TP + FP + 0.0);
+            double precision = (TP + FP != 0) ? TP/(TP + FP + 0.0) : 0 ;
             double recall = TP/(TP + FN + 0.0);
 
-            // TODO: Check this formula
-            double F = 1 / ((ALPHA / precision) + ((1 - ALPHA) / recall));
-            double F1 = ((BETA * BETA + 1) * precision * recall) / ((BETA * BETA * precision) + recall);
+            sumOfP += precision;
+            sumOfR += recall;
 
-            System.out.println(String.format("%d Precision = %.2f Recall = %.2f F = %.2f", i, precision, recall, F));
+            double F = 1 / ((ALPHA / precision) + ((1 - ALPHA) / recall));
+
+            sumOfF += F;
+//            System.out.println(String.format("%d Precision = %.2f Recall = %.2f F = %.2f", i, precision, recall, F));
+
         }
 
+        System.out.println(String.format("Average Precision = %f Average recall = %f Average F = %f", sumOfP / m_Truth.size(), sumOfR / m_Truth.size(), sumOfF / m_Truth.size()));
+
+        return sumOfF / m_Truth.size();
     }
 
     private static void parseTheTruth(String i_PathToTheTruth){
@@ -135,7 +171,7 @@ public class Program {
             StringBuilder docsId = new StringBuilder();
 
             for (String docId: docsList){
-                docsId.append(docId + " ");
+                docsId.append(docId).append(" ");
             }
 
             m_OutputFile.write(id + " " + docsId.toString() + "\n");
