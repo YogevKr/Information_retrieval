@@ -65,6 +65,7 @@ public class Program {
     }
 
     private static void findBestTForGivenTruth(String i_TruthPath) throws IOException, ParseException {
+
         parseTheTruth(i_TruthPath);
 
         double startingThreshold = 0;
