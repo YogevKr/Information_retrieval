@@ -59,8 +59,8 @@ public class Program {
         writeQueriesResultsToFile();
 
 
-        parseTheTruth("truth.txt");
-        runExperiment();
+//        parseTheTruth("truth.txt");
+//        runExperiment();
 
     }
 
