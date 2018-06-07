@@ -67,9 +67,14 @@ public class Program {
     private static void findBestTForGivenTruth(String i_TruthPath) throws IOException, ParseException {
         parseTheTruth(i_TruthPath);
 
-        double T = 1, bestT = 0, F, bestF = 0;
+        double startingThreshold = 0;
+        double maxThreshold = 20;
+        double jump = 0.001;
 
-        while (T <= 1.4) {
+        double T, bestT = 0, F, bestF = 0;
+
+        T = startingThreshold;
+        while (T <= maxThreshold) {
             m_SearchEngine.SetThreshold(T);
             executeAllQueries();
             F = runExperiment();
@@ -79,7 +84,7 @@ public class Program {
                 bestT = T;
             }
 
-            T += 0.001;
+            T += jump;
 
             System.out.println(String.format("T = %f, F = %f", T, F));
         }
