@@ -123,8 +123,7 @@ public class Program {
             double F = 1 / ((ALPHA / precision) + ((1 - ALPHA) / recall));
 
             sumOfF += F;
-//            System.out.println(String.format("%d Precision = %.2f Recall = %.2f F = %.2f", i, precision, recall, F));
-
+            System.out.println(String.format("%d Precision = %.2f Recall = %.2f F = %.2f", i, precision, recall, F));
         }
 
         System.out.println(String.format("Average Precision = %f Average recall = %f Average F = %f", sumOfP / m_Truth.size(), sumOfR / m_Truth.size(), sumOfF / m_Truth.size()));
@@ -139,6 +138,10 @@ public class Program {
         for (String line : lines) {
             if (!line.equals("")) {
                 String[] sp = line.split(" +", 2);
+
+                sp[1] = sp[1].replaceAll("424", "");
+                sp[1] = sp[1].replaceAll("425", "");
+
                 truth.put(Integer.parseInt(sp[0]), sp[1].split(" +"));
             }
         }
